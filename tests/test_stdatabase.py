@@ -41,8 +41,8 @@ class TestStDatabase(TestCase):
         org = STDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(10, 50, 100)))
-        new = org[::2]
+        new = org[::2, 90::3]
 
         assert new.parameters.shape[0] == 5
-        assert len(new.time_instants) == 100
-        assert new.snapshots.shape == (5,50,100)
+        assert len(new.time_instants) == 4
+        assert new.snapshots.shape == (5,50,4)
