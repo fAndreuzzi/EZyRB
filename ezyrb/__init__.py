@@ -14,4 +14,4 @@ from .linear import Linear
 from .gpr import GPR
 from .reducedordermodel import ReducedOrderModel
 from .ann import ANN
-from .stdatabase import STDatabase
+from .spacetime_database import SpaceTimeDatabase

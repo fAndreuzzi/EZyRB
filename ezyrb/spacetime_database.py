@@ -4,7 +4,7 @@ Module for the snapshots database collected during the Offline stage
 import numpy as np
 
 
-class STDatabase(object):
+class SpaceTimeDatabase(object):
     """
     Database class
 
@@ -91,7 +91,7 @@ class STDatabase(object):
 
         parameters_index, time_index = indexes
 
-        return STDatabase(parameters=self._parameters[parameters_index],
+        return SpaceTimeDatabase(parameters=self._parameters[parameters_index],
             time_instants=self._time_instants[time_index],
             snapshots=self._snapshots[parameters_index, :, time_index],
             scaler_parameters=self.scaler_parameters,

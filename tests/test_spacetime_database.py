@@ -1,15 +1,15 @@
 import numpy as np
 
 from unittest import TestCase
-from ezyrb import STDatabase
+from ezyrb import SpaceTimeDatabase
 
 
 class TestStDatabase(TestCase):
     def test_constructor_empty(self):
-        a = STDatabase()
+        a = SpaceTimeDatabase()
 
     def test_constructor_arg(self):
-        db = STDatabase(np.random.uniform(size=(10, 3)),
+        db = SpaceTimeDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(10, 50, 100)))
 
@@ -19,26 +19,26 @@ class TestStDatabase(TestCase):
 
     def test_constructor_arg_wrong(self):
         with self.assertRaises(ValueError):
-            STDatabase(np.random.uniform(size=(10, 3)),
+            SpaceTimeDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(9, 50, 100)))
 
     def test_constructor_arg_wrong2(self):
         with self.assertRaises(ValueError):
-            STDatabase(np.random.uniform(size=(10, 3)),
+            SpaceTimeDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(10, 50, 101)))
 
     def test_constructor_error(self):
         with self.assertRaises(RuntimeError):
-            STDatabase(np.eye(5))
+            SpaceTimeDatabase(np.eye(5))
 
     def test_constructor_error2(self):
         with self.assertRaises(RuntimeError):
-            STDatabase(np.eye(5), np.eye(5))
+            SpaceTimeDatabase(np.eye(5), np.eye(5))
 
     def test_getitem(self):
-        org = STDatabase(np.random.uniform(size=(10, 3)),
+        org = SpaceTimeDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(10, 50, 100)))
         new = org[::2, 90::3]
@@ -48,7 +48,7 @@ class TestStDatabase(TestCase):
         assert new.snapshots.shape == (5, 50, 4)
 
     def test_getitem_one_argument(self):
-        org = STDatabase(np.random.uniform(size=(10, 3)),
+        org = SpaceTimeDatabase(np.random.uniform(size=(10, 3)),
                  np.random.uniform(size=(100)),
                  np.random.uniform(size=(10, 50, 100)))
         new = org[::2]
