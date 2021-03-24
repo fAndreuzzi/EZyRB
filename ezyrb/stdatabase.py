@@ -78,14 +78,18 @@ class STDatabase(object):
         else:
             return self._snapshots
 
-    def __getitem__(self, tp):
+    def __getitem__(self, indexes):
         """
         This method returns a new Database with the selected parameters and snapshots.
 
         .. warning:: The new parameters and snapshots are a view of the
             original Database.
         """
-        parameters_index, time_index = tp
+        # in this case the user provided only one argument
+        if not isinstance(indexes, tuple):
+            return self[indexes, :]
+
+        parameters_index, time_index = indexes
 
         return STDatabase(parameters=self._parameters[parameters_index],
             time_instants=self._time_instants[time_index],
