@@ -53,7 +53,7 @@ class SpaceTimePOD(Reduction):
         # columns: parameters
         X3 = np.reshape(temp, (temp.shape[0] * temp.shape[1], temp.shape[2]), 'F')
 
-        return self.modes.T.dot(X3)
+        return np.linalg.pinv(self.modes).dot(X3)
 
     def _standard_spacetime_basis(self, X1, X2):
         spatial_pod = POD(**self._spatial_pod_args)
