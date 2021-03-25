@@ -89,7 +89,7 @@ class SpaceTimePOD(Reduction):
 
         :type: numpy.ndarray
         """
-        expanded = self.modes.dot(X).T
+        expanded = self.modes.dot(X)
 
         if X.ndim == 2:
             # X contains modal coefficients for two or more parameters
