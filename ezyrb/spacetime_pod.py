@@ -7,14 +7,18 @@ from .reduction import Reduction
 from .pod import POD
 
 class SpaceTimePOD(Reduction):
-    def __init__(self, tailored=True, spatial_pod_args={}, temporal_pod_args={}):
+    def __init__(self, tailored=True, optimal_modal_coefficients=True,
+        spatial_pod_args={}, temporal_pod_args={}):
         """
         """
         self._tailored = tailored
+        self._optimal_modal_coefficients = optimal_modal_coefficients
+
         self._spatial_pod_args = spatial_pod_args
         self._temporal_pod_args = temporal_pod_args
 
         self._modes_product_inv = None
+        self._modes_inv = None
 
     @property
     def modes(self):
@@ -55,10 +59,15 @@ class SpaceTimePOD(Reduction):
         # columns: parameters
         X3 = np.reshape(temp, (temp.shape[0] * temp.shape[1], temp.shape[2]), 'F')
 
-        if self._modes_product_inv is None:
-            self._modes_product_inv = (np.linalg.inv(self.modes.T @ self.modes)
-                @ self.modes.T)
-        return self._modes_product_inv @ X3
+        if self._optimal_modal_coefficients:
+            if self._modes_product_inv is None:
+                self._modes_product_inv = (np.linalg.inv(self.modes.T @ self.modes)
+                    @ self.modes.T)
+            return self._modes_product_inv @ X3
+        else:
+            if self._modes_inv is None:
+                self._modes_inv = np.linalg.pinv(self.modes)
+            return self._modes_inv @ X3
 
     def _standard_spacetime_basis(self, X1, X2):
         spatial_pod = POD(**self._spatial_pod_args)
