@@ -56,7 +56,7 @@ class SpaceTimePOD(Reduction):
         X3 = np.reshape(temp, (temp.shape[0] * temp.shape[1], temp.shape[2]), 'F')
 
         if self._modes_product_inv is None:
-            self._modes_product_inv = (np.linalg.pinv(self.modes.T @ self.modes)
+            self._modes_product_inv = (np.linalg.inv(self.modes.T @ self.modes)
                 @ self.modes.T)
         return self._modes_product_inv @ X3
 
