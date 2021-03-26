@@ -7,11 +7,25 @@ from .reduction import Reduction
 from .pod import POD
 
 class SpaceTimePOD(Reduction):
-    def __init__(self, tailored=True, optimal_modal_coefficients=True,
+    def __init__(self, method='tailored', optimal_modal_coefficients=True,
         spatial_pod_args={}, temporal_pod_args={}):
         """
         """
-        self._tailored = tailored
+        available_methods = {
+            'tailored': self._tailored_spacetime_basis,
+            'kronecker': self._kronecker_spacetime_basis,
+            'nested': self._nested_spacetime_reduction,
+        }
+
+        method = available_methods.get(method)
+        if method is None:
+            raise RuntimeError(
+                "Invalid method for POD. Please chose one among {}".format(
+                    ', '.join(available_methods)))
+        self._method = method
+
+        self._modes = None
+        self._singular_values = None
         self._optimal_modal_coefficients = optimal_modal_coefficients
 
         self._spatial_pod_args = spatial_pod_args
@@ -24,52 +38,9 @@ class SpaceTimePOD(Reduction):
     def modes(self):
         return self._modes
 
-    def reduce(self, X):
-        """
-        Reduces the parameter Space by using the specified reduction method (default svd).
+    # methods
 
-        :type: numpy.ndarray
-        """
-        # X axes:
-        # - 0 -> time
-        # - 1 -> space
-        # - 2 ->  parameters
-
-        # temp axes:
-        # - 0 -> space
-        # - 1 -> time
-        # - 2 ->  parameters
-        temp = np.swapaxes(X, 0, 1)
-
-        # we store this values to use later when reconstructing the snapshots
-        # in reduce()
-        self._space_points = temp.shape[0]
-        self._time_instants = temp.shape[1]
-        self._ntrain = temp.shape[2]
-
-        X1 = np.reshape(temp, (temp.shape[0], temp.shape[1] * temp.shape[2]), 'F')
-        X2 = np.reshape(X, (X.shape[0], X.shape[1] * X.shape[2]), 'F')
-
-        if self._tailored:
-            self._tailored_spacetime_basis(X1, X2)
-        else:
-            self._standard_spacetime_basis(X1, X2)
-
-        # rows: space/time
-        # columns: parameters
-        X3 = np.reshape(temp, (temp.shape[0] * temp.shape[1], temp.shape[2]), 'F')
-
-        if self._optimal_modal_coefficients:
-            if self._modes_product_inv is None:
-                self._modes_product_inv = (np.linalg.inv(self.modes.T @ self.modes)
-                    @ self.modes.T)
-            return self._modes_product_inv @ X3
-        else:
-            if self._modes_inv is None:
-                self._modes_inv = np.linalg.pinv(self.modes)
-            return self._modes_inv @ X3
-
-    def _standard_spacetime_basis(self, X1, X2):
+    def _kronecker_spacetime_basis(self, X1, X2):
         spatial_pod = POD(**self._spatial_pod_args)
         spatial_pod.reduce(X1)
         Phi = spatial_pod.modes
@@ -97,19 +68,91 @@ class SpaceTimePOD(Reduction):
         tailored_Psi_i = self._temporal_pod.modes
         return np.kron(tailored_Psi_i, spatial_mode[:,None])
 
+    def _nested_spacetime_reduction(self, X1):
+        self._spatial_pod = POD(**self._spatial_pod_args)
+        self._spatial_modal_coeffs = self._spatial_pod.reduce(X1)
+
+        coeffstime_mu = np.reshape(self._spatial_modal_coeffs, (-1, self._ntrain),
+            'F')
+        self._temporal_pod = POD(**self._temporal_pod_args)
+        return self._temporal_pod.reduce(coeffstime_mu)
+
+    # POD interface
+
+    def reduce(self, X):
+        """
+        Reduces the parameter Space by using the specified reduction method (default svd).
+
+        :type: numpy.ndarray
+        """
+        # X axes:
+        # - 0 -> time
+        # - 1 -> space
+        # - 2 ->  parameters
+
+        # temp axes:
+        # - 0 -> space
+        # - 1 -> time
+        # - 2 ->  parameters
+        temp = np.swapaxes(X, 0, 1)
+
+        # we store this values to use later when reconstructing the snapshots
+        # in reduce()
+        self._space_points = temp.shape[0]
+        self._time_instants = temp.shape[1]
+        self._ntrain = temp.shape[2]
+
+        X1 = np.reshape(temp, (temp.shape[0], -1), 'F')
+
+        if (self._method == self._tailored_spacetime_basis or
+            self._method == self._kronecker_spacetime_basis):
+            X2 = np.reshape(X, (X.shape[0], -1), 'F')
+
+            if self._method == self._tailored_spacetime_basis:
+                self._tailored_spacetime_basis(X1, X2)
+            else:
+                self._kronecker_spacetime_basis(X1, X2)
+
+            # rows: space/time
+            # columns: parameters
+            X3 = np.reshape(temp, (-1, temp.shape[2]), 'F')
+
+            if self._optimal_modal_coefficients:
+                if self._modes_product_inv is None:
+                    # initialize the constant matrix
+                    self._modes_product_inv = (np.linalg.inv(self.modes.T
+                        @ self.modes) @ self.modes.T)
+                # compute modal coefficients
+                return self._modes_product_inv @ X3
+            else:
+                if self._modes_inv is None:
+                    # initialize the constant matrix
+                    self._modes_inv = np.linalg.pinv(self.modes)
+                # compute modal coefficients
+                return self._modes_inv @ X3
+        else:
+            return self._nested_spacetime_reduction(X1)
+
     def expand(self, X):
         """
         Projects a reduced to full order solution.
 
         :type: numpy.ndarray
         """
-        expanded = self.modes.dot(X)
+        if (self._method == self._tailored_spacetime_basis or
+            self._method == self._kronecker_spacetime_basis):
+            expanded = self.modes.dot(X)
 
-        if X.ndim == 2:
-            # X contains modal coefficients for two or more parameters
             space_time = np.reshape(expanded, (self._space_points,
-                self._time_instants, X.shape[1]), 'F')
+                    self._time_instants, -1), 'F')
+            # users expect time/space, not space/time
+            return np.swapaxes(space_time, 0, 1)
         else:
-            space_time = np.reshape(expanded, (self._space_points,
-                self._time_instants), 'F')
-        return np.swapaxes(space_time, 0,1)
+            coeffstime_mu = self._temporal_pod.expand(X).T
+            coeffs_timemu = np.reshape(coeffstime_mu,
+                (-1, self._time_instants * self._ntrain), 'F')
+
+            X1 = self._spatial_pod.expand(coeffs_timemu).T
+            return np.swapaxes(np.reshape(X1,
+                (self._space_points, self._time_instants, self._ntrain), 'F'),
+                0, 1)
