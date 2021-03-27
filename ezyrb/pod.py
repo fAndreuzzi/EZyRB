@@ -1,7 +1,7 @@
 """
 Module for Proper Orthogonal Decomposition (POD).
 Three different methods can be employed: Truncated Singular Value Decomposition,
-Truncated Randomized Singular Value Decomposition, Truncated Singular Value 
+Truncated Randomized Singular Value Decomposition, Truncated Singular Value
 Decomposition via correlation matrix.
 """
 import numpy as np
@@ -66,7 +66,7 @@ class POD(Reduction):
         :type: numpy.ndarray
         """
         self._modes, self._singular_values = self.__method(X)
-        return self.modes.T.dot(X)
+        return self.modes.T.conj().dot(X)
 
     def expand(self, X):
         """
