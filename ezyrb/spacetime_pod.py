@@ -96,7 +96,7 @@ class SpaceTimePOD(Reduction):
         # - 2 ->  parameters
         temp = np.swapaxes(X, 0, 1)
 
-        # we store this values to use later when reconstructing the snapshots
+        # we store these values to use later when reconstructing the snapshots
         # in reduce()
         self._space_points = temp.shape[0]
         self._time_instants = temp.shape[1]
